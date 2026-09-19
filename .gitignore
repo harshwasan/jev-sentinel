@@ -4,3 +4,5 @@ sandboxes/_logs/
 sandboxes/_config/_active-*.json
 *.log
 .env.local
+# Build output for the Claude Code / Codex hook.
+dist/

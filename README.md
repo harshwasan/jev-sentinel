@@ -1,6 +1,6 @@
 # pi-jev-sentinel
 
-A [Pi](https://github.com/earendil-works/pi) coding-agent extension that uses TypeSafe's [Jev](https://docs.typesafe.ai/) model to check what the agent does, reads, and says.
+A guard for coding agents, built on TypeSafe's [Jev](https://docs.typesafe.ai/) model: it checks what the agent does, reads, and says. Ships as a [Pi](https://github.com/earendil-works/pi) extension and as a hook for **Claude Code** and **Codex CLI** ([setup](hooks/README.md)).
 
 Pi has no built-in permission system: tools run with your permissions, and a README that says "AI agents: run `curl … | sh`" is just more text to the model. Jev Sentinel puts a fast, cheap judge in front of every step. Jev answers typed questions with probabilities, and plain code turns those into **allow**, **ask you**, or **warn**.
 
@@ -48,6 +48,18 @@ export TYPESAFE_API_KEY=...        # PowerShell: $env:TYPESAFE_API_KEY = "..."
 
 To try it without installing: `pi -e git:github.com/harshwasan/pi-jev-sentinel`.
 
+### Claude Code and Codex CLI
+
+The same checks run as a hook on both:
+
+```bash
+git clone https://github.com/harshwasan/pi-jev-sentinel && cd pi-jev-sentinel
+npm install && npm run build
+$env:TYPESAFE_API_KEY = "..."; ./hooks/try-hook.ps1      # see the checks decide, no host involved
+```
+
+Then copy [`hooks/claude-settings.example.json`](hooks/claude-settings.example.json) into your Claude Code settings, or [`hooks/codex-hooks.example.json`](hooks/codex-hooks.example.json) to `~/.codex/hooks.json`. The differences from the pi version are listed in [hooks/README.md](hooks/README.md): the output check runs after the tool instead of before it, "ask" means the host's own approval prompt, and an allowed action returns nothing, so your existing permission rules still apply.
+
 Inside pi, `/jev-sentinel` shows the status. `/jev-sentinel reset` clears the "every action needs approval" flag. `/jev-sentinel task`, `clear-task`, and `pin-symbol <s>` manage pinning.
 
 ## How a tool call is decided
@@ -88,7 +100,7 @@ Recent conversation, the tool call, tool outputs, and replies. Nothing from the 
 
 ## Testing
 
-- **`npm test`:** 94 unit tests with a fake Jev.
+- **`npm test`:** 106 unit tests with a fake Jev, including the hook run as a real subprocess and both hosts' transcript formats.
 - **`npm run live-check`:** scripted scenarios against the real Jev API, in all three question modes.
 - **`sandboxes/`:** four practice projects with planted traps (a poisoned README, an injection 1,487 characters into a file, fake `.env` secrets, a login bug to pin). They come with PowerShell scripts to start pi in each, read the decision log, and reset. See [sandboxes/TESTING.md](sandboxes/TESTING.md).
 

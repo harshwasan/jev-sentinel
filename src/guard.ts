@@ -6,7 +6,8 @@
  */
 
 import { readFileSync, statSync } from "node:fs";
-import { basename, isAbsolute, relative, resolve } from "node:path";
+import { homedir } from "node:os";
+import { basename, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
 
 export const VERDICTS = ["on_task", "needs_user_approval", "malicious", "needs_more_context"] as const;
@@ -595,6 +596,10 @@ export function referencedPaths(toolName: string, toolInput: Record<string, unkn
 		const value = toolInput[key];
 		if (typeof value === "string" && value) paths.push(value);
 	}
+	// Hosts whose patch tools touch several files at once (e.g. Codex apply_patch) list them here.
+	if (Array.isArray(toolInput.paths)) {
+		for (const value of toolInput.paths) if (typeof value === "string" && value) paths.push(value);
+	}
 	const command = toolInput.command;
 	if ((toolName === "bash" || toolName === "powershell") && typeof command === "string") {
 		for (const token of command.split(/[\s;|&<>()]+/)) {
@@ -610,6 +615,33 @@ export function referencedPaths(toolName: string, toolInput: Record<string, unkn
  * file names, and URL hosts. Deliberately exact-match only; short or generic names
  * (e.g. "a.js") are skipped because they match too much.
  */
+/** Tools that only read: they cannot change a protected file, so they are not treated as tampering. */
+export const READ_ONLY_TOOLS = new Set(["read", "Read", "grep", "Grep", "glob", "Glob", "find", "ls", "LS"]);
+
+/**
+ * The first path this tool call touches that lies inside one of `protectedPaths` — the host agent's
+ * own folder (settings, sessions, installed extensions), this extension's settings file, or its log.
+ * Changing any of those can switch the checks off or redirect them, so callers never let Jev alone
+ * approve such a call.
+ */
+export function protectedPathTouched(
+	toolName: string,
+	toolInput: Record<string, unknown>,
+	cwd: string,
+	protectedPaths: readonly (string | null | undefined)[],
+): string | undefined {
+	if (READ_ONLY_TOOLS.has(toolName)) return undefined;
+	const roots = protectedPaths.filter((p): p is string => Boolean(p)).map((p) => resolve(p).toLowerCase());
+	for (const raw of referencedPaths(toolName, toolInput)) {
+		const expanded = raw.startsWith("~") ? join(homedir(), raw.slice(1)) : raw;
+		const full = resolve(cwd, expanded).toLowerCase();
+		if (roots.some((root) => full === root || full.startsWith(root + sep))) return raw;
+		// Unresolvable forms such as $HOME/.pi/agent or %USERPROFILE%\.claude\settings.json.
+		if (/[\\/]\.(pi[\\/]agent|claude|codex)([\\/]|$)/i.test(raw) || /jev-sentinel\.json/i.test(raw)) return raw;
+	}
+	return undefined;
+}
+
 export function relevanceAnchors(toolName: string, toolInput: Record<string, unknown>): string[] {
 	const anchors = new Set<string>();
 	for (const path of referencedPaths(toolName, toolInput)) {

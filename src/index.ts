@@ -21,9 +21,8 @@
  * Optional config: ~/.pi/agent/jev-sentinel.json or JEV_SENTINEL_CONFIG (see README.md).
  */
 
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { dirname, join, resolve, sep } from "node:path";
+import { appendFileSync, mkdirSync } from "node:fs";
+import { dirname, join } from "node:path";
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import type { TextContent } from "@earendil-works/pi-ai";
 import {
@@ -46,12 +45,11 @@ import {
 	type JevRequest,
 	MAX_INPUT_CHARS,
 	parsePinnedTask,
-	QUESTION_MODES,
-	type QuestionMode,
-	referencedPaths,
+	protectedPathTouched,
 	scrubSecrets,
 	truncate,
 } from "./guard.ts";
+import { loadConfigFile } from "./config.ts";
 import { describeSource, injectionNote, replyWarnings, screenReply, screenToolOutput } from "./screens.ts";
 
 const STATUS_KEY = "jev-sentinel";
@@ -67,42 +65,14 @@ const STRING_ARRAY_KEYS = new Set<keyof GuardConfig>(["skipTools", "trustedPaths
 
 const pct = (p: number) => `${Math.round(p * 100)}%`;
 
+/** The settings file in use. Protected from the agent, along with pi's own folder. */
+let configPath = "";
+
 /** Settings file: JEV_SENTINEL_CONFIG if set (e.g. one per test sandbox), otherwise ~/.pi/agent/jev-sentinel.json. */
 function loadConfig(): { config: GuardConfig; error?: string } {
-	const path = process.env.JEV_SENTINEL_CONFIG?.trim() || join(getAgentDir(), "jev-sentinel.json");
+	configPath = process.env.JEV_SENTINEL_CONFIG?.trim() || join(getAgentDir(), "jev-sentinel.json");
 	const defaults: GuardConfig = { ...DEFAULT_CONFIG, logFile: join(getAgentDir(), "jev-sentinel", "decisions.jsonl") };
-	if (!existsSync(path)) return { config: defaults };
-	try {
-		// Strip a UTF-8 byte-order mark (Windows PowerShell 5.1 writes one).
-		const text = readFileSync(path, "utf8");
-		const raw = JSON.parse(text.charCodeAt(0) === 0xfeff ? text.slice(1) : text) as Record<string, unknown>;
-		if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
-			return { config: defaults, error: `${path}: expected a JSON object; using defaults` };
-		}
-		const config: GuardConfig = { ...defaults };
-		for (const key of Object.keys(defaults) as (keyof GuardConfig)[]) {
-			if (!(key in raw)) continue;
-			const value = raw[key];
-			const expected = typeof defaults[key];
-			const ok =
-				key === "logFile"
-					? value === null || typeof value === "string"
-					: STRING_ARRAY_KEYS.has(key)
-						? Array.isArray(value) && value.every((v) => typeof v === "string")
-						: key === "questionMode"
-							? QUESTION_MODES.includes(value as QuestionMode)
-							: typeof value === expected;
-			if (!ok) return { config: defaults, error: `${path}: invalid value for "${key}"; using defaults` };
-			(config as unknown as Record<string, unknown>)[key] = value;
-		}
-		// Every Jev request carries conversation data, so only ever send it over TLS.
-		if (!/^https:\/\//i.test(config.baseUrl)) {
-			return { config: defaults, error: `${path}: baseUrl must start with https://; using defaults` };
-		}
-		return { config };
-	} catch (err) {
-		return { config: defaults, error: `${path}: ${(err as Error).message}; using defaults` };
-	}
+	return loadConfigFile(configPath, defaults);
 }
 
 function pinReminder(task: string): string {
@@ -118,32 +88,6 @@ function summarizeInput(input: Record<string, unknown>): string {
 	const text = typeof input.command === "string" ? input.command : JSON.stringify(input);
 	if (text.length <= 400) return text;
 	return `${text.slice(0, 250)} … [${text.length - 400} more characters] … ${text.slice(-150)}`;
-}
-
-const READ_ONLY_TOOLS = new Set(["read", "grep", "find", "ls"]);
-
-/**
- * A path the tool call touches that controls the extension or pi itself: pi's agent folder (settings,
- * sessions, installed extensions), this extension's settings file, or its log. Changing these can
- * switch checks off or redirect them, so such calls are never judged by Jev alone.
- */
-function guardStatePath(
-	toolName: string,
-	toolInput: Record<string, unknown>,
-	cwd: string,
-	logFile: string | null,
-): string | undefined {
-	const roots = [getAgentDir(), process.env.JEV_SENTINEL_CONFIG?.trim(), logFile ?? undefined]
-		.filter((p): p is string => Boolean(p))
-		.map((p) => resolve(p).toLowerCase());
-	for (const raw of referencedPaths(toolName, toolInput)) {
-		const expanded = raw.startsWith("~") ? join(homedir(), raw.slice(1)) : raw;
-		const full = resolve(cwd, expanded).toLowerCase();
-		if (roots.some((root) => full === root || full.startsWith(root + sep))) return raw;
-		// Unresolvable forms such as $HOME/.pi/agent or %USERPROFILE%\.pi\agent.
-		if (/[\\/]\.pi[\\/]agent([\\/]|$)/i.test(raw) || /jev-sentinel\.json/i.test(raw)) return raw;
-	}
-	return undefined;
 }
 
 export default function (pi: ExtensionAPI) {
@@ -398,9 +342,11 @@ export default function (pi: ExtensionAPI) {
 		let reason = assessment.reason;
 		let override: string | undefined;
 		// Reading them cannot switch checks off (pi reads skills from there), so only other tools count.
-		const touchedState = READ_ONLY_TOOLS.has(event.toolName)
-			? undefined
-			: guardStatePath(event.toolName, event.input, ctx.cwd, config.logFile);
+		const touchedState = protectedPathTouched(event.toolName, event.input, ctx.cwd, [
+			getAgentDir(),
+			configPath,
+			config.logFile,
+		]);
 		if (touchedState) {
 			// Changing pi's or this extension's own config can switch checks off: always the loud warning.
 			decision = "malicious";

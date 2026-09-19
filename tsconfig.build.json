@@ -1,0 +1,12 @@
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"noEmit": false,
+		"outDir": "dist",
+		"declaration": false,
+		"sourceMap": false,
+		// Lets the sources keep their ".ts" import paths while the build emits ".js" ones.
+		"rewriteRelativeImportExtensions": true
+	},
+	"include": ["src"]
+}
