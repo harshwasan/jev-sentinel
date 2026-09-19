@@ -111,7 +111,7 @@ npm run live-check
 
 ## Unit tests (no keys needed)
 
-84 tests with a fake Jev, covering every feature's logic:
+94 tests with a fake Jev, covering every feature's logic:
 
 ```powershell
 cd pi-jev-sentinel

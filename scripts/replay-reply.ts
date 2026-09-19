@@ -11,12 +11,14 @@ import { readFileSync } from "node:fs";
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import {
 	contentText,
+	collectSecrets,
 	createJevRequest,
 	DEFAULT_CONFIG,
 	describeUserRequest,
 	type GuardConfig,
 	type JevRequest,
 	renderConversation,
+	scrubSecrets,
 	truncate,
 } from "../src/guard.ts";
 import { REPLY_QUESTIONS, screenReply } from "../src/screens.ts";
@@ -100,7 +102,10 @@ if (!apiKey) {
 	console.log("Set TYPESAFE_API_KEY to also send both versions to Jev and compare the scores.");
 	process.exit(0);
 }
-const request = createJevRequest(apiKey, config);
+// Same scrubbing as the extension's request choke point.
+const secrets = collectSecrets(messages);
+const send = createJevRequest(apiKey, config);
+const request: typeof send = (state, questions, signal) => send(scrubSecrets(state, secrets), questions, signal);
 for (const [label, state] of [
 	["OLD", old],
 	["NEW", current.state],

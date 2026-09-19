@@ -82,8 +82,10 @@ export interface GuardConfig {
 	/** Screen each tool output for suspicious agent instructions before the agent sees it. */
 	screenToolOutputs: boolean;
 	/**
-	 * Files whose read output is never screened: an entry ending in "/" matches a folder prefix
-	 * (relative to the project); other entries match a relative path or a file name.
+	 * Files whose read output is never screened, relative to the project: an entry ending in "/"
+	 * matches a folder, "**&#47;NAME" (two stars, a slash, then the name) matches a file name anywhere, and any other entry matches that exact
+	 * path (so the default "AGENTS.md" is the project root's only). Paths outside the project, including
+	 * other drives, are never trusted.
 	 */
 	trustedPaths: string[];
 	/** P(suspicious_agent_instructions) at or above this flags a tool output. */
@@ -344,6 +346,8 @@ export interface BuiltState {
 	hasFileCandidates: boolean;
 	/** Earlier messages added by the relevance filter. */
 	relatedMessages: number;
+	/** A tool input was longer than MAX_INPUT_CHARS, so Jev saw only its start. */
+	inputTruncated: boolean;
 }
 
 export type Decision = "allow" | "ask" | "malicious";
@@ -366,6 +370,8 @@ export interface Assessment {
 	summary: string;
 	rounds: RoundLog[];
 	model: string;
+	/** A tool input was too long for Jev to see in full; the caller must not auto-allow it. */
+	inputTruncated: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -380,6 +386,31 @@ export const WITHHELD_SECRET = "[withheld by Jev sentinel: output of a read or c
 export const SCRUBBED_SECRET = "[secret withheld by Jev sentinel]";
 /** Values shorter than this are not scrubbed: short words like "true" or "fake" appear everywhere. */
 const MIN_SECRET_CHARS = 8;
+/** Variable or field names that usually hold a secret. */
+const SECRET_NAME = /(KEY|TOKEN|SECRET|PASSW|CREDENTIAL|AUTH)/i;
+/**
+ * NAME=value / NAME: value where NAME looks secret and the value looks like a literal (8+ chars, no
+ * spaces or code punctuation). Catches secrets printed by env, grep, cat of an ordinary file, etc.
+ */
+const SECRET_ASSIGNMENT =
+	/(\b[\w.-]*(?:KEY|TOKEN|SECRET|PASSW|CREDENTIAL|AUTH)[\w.-]*["']?\s*[=:]\s*["']?)([^\s"',;()]{8,})/gi;
+const BEARER_TOKEN = /(\bBearer\s+)([\w.~+/-]{8,}=*)/g;
+/** Tool inputs longer than this are cut before Jev sees them. */
+export const MAX_INPUT_CHARS = 8_000;
+
+/** Values of environment variables with secret-looking names (the agent's shell inherits them). */
+export function envSecrets(env: NodeJS.ProcessEnv = process.env): string[] {
+	return Object.entries(env)
+		.filter(
+			([name, value]) =>
+				SECRET_NAME.test(name) &&
+				// Paths such as SSH_AUTH_SOCK or XAUTHORITY are not secrets, and scrubbing them hides useful context.
+				!/(SOCK|PATH|DIR|FILE|AUTHORITY)$/i.test(name) &&
+				typeof value === "string" &&
+				value.length >= MIN_SECRET_CHARS,
+		)
+		.map(([, value]) => value as string);
+}
 
 export function isSecretPath(path: string): boolean {
 	return SECRET_FILE.test(basename(path));
@@ -444,7 +475,7 @@ function secretToolCallIds(messages: AgentMessage[]): Set<string> {
  * command that touched a secrets file. The agent may repeat these anywhere, e.g. quoting .env
  * back to the user, so they are scrubbed from everything sent to Jev, not just the tool output.
  */
-export function collectSecrets(messages: AgentMessage[]): string[] {
+export function collectSecrets(messages: AgentMessage[], env: NodeJS.ProcessEnv = process.env): string[] {
 	const ids = secretToolCallIds(messages);
 	const outputs: string[] = [];
 	for (const message of messages) {
@@ -453,7 +484,7 @@ export function collectSecrets(messages: AgentMessage[]): string[] {
 			outputs.push(message.output);
 		}
 	}
-	const secrets = new Set<string>();
+	const secrets = new Set<string>(envSecrets(env));
 	for (const line of outputs.flatMap((output) => output.split(/\r?\n/))) {
 		const trimmed = line.trim();
 		if (!trimmed || trimmed.startsWith("#") || trimmed.startsWith("//")) continue;
@@ -466,11 +497,21 @@ export function collectSecrets(messages: AgentMessage[]): string[] {
 	return [...secrets].sort((a, b) => b.length - a.length);
 }
 
-/** Returns a copy of `value` with every secret replaced in every string, at any depth. */
+/**
+ * Returns a copy of `value` with every known secret replaced in every string, at any depth, plus any
+ * secret-looking NAME=value assignment or Bearer token, whatever command or file it came from.
+ */
 export function scrubSecrets<T>(value: T, secrets: readonly string[]): T {
-	if (secrets.length === 0) return value;
+	const scrubText = (text: string): string =>
+		secrets
+			.reduce((t, secret) => t.split(secret).join(SCRUBBED_SECRET), text)
+			// Real secrets contain a digit; code references like process.env.API_KEY or ${TOKEN} are left alone.
+			.replace(SECRET_ASSIGNMENT, (match, name: string, value: string) =>
+				/\d/.test(value) && !/^[$%{]|^(process\.env|os\.environ)\b/.test(value) ? name + SCRUBBED_SECRET : match,
+			)
+			.replace(BEARER_TOKEN, `$1${SCRUBBED_SECRET}`);
 	const scrub = (v: unknown): unknown => {
-		if (typeof v === "string") return secrets.reduce((text, secret) => text.split(secret).join(SCRUBBED_SECRET), v);
+		if (typeof v === "string") return scrubText(v);
 		if (Array.isArray(v)) return v.map(scrub);
 		if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, scrub(x)]));
 		return v;
@@ -647,7 +688,7 @@ export function buildState(input: ToolCallInput, level: ContextLevel, config: Gu
 		proposed_action: {
 			tool: input.toolName,
 			input: Object.fromEntries(
-				Object.entries(input.toolInput).map(([k, v]) => [k, typeof v === "string" ? truncate(v, 8_000) : v]),
+				Object.entries(input.toolInput).map(([k, v]) => [k, typeof v === "string" ? truncate(v, MAX_INPUT_CHARS) : v]),
 			),
 		},
 		...(agentExplanation ? { agent_explanation_for_action: agentExplanation } : {}),
@@ -717,6 +758,7 @@ export function buildState(input: ToolCallInput, level: ContextLevel, config: Gu
 		toolOutputsTruncated: window.some((r) => r.truncatedToolOutput),
 		hasFileCandidates: availableFiles.length > 0,
 		relatedMessages: related.length,
+		inputTruncated: Object.values(input.toolInput).some((v) => typeof v === "string" && v.length > MAX_INPUT_CHARS),
 	};
 }
 
@@ -882,6 +924,7 @@ export async function assess(
 		summary: formatAnswers(final),
 		rounds,
 		model: final.model,
+		inputTruncated: buildState(input, level, config).inputTruncated,
 	};
 }
 

@@ -35,11 +35,9 @@ $ErrorActionPreference = "Stop"
 
 $root = $PSScriptRoot
 $repo = Split-Path $root -Parent
-$fixture = Join-Path $root "fixtures\$Name"
-if (-not (Test-Path $fixture)) {
-	$names = (Get-ChildItem (Join-Path $root "fixtures") -Directory).Name -join ", "
-	throw "No sandbox '$Name'. Choose one of: $names"
-}
+$valid = (Get-ChildItem (Join-Path $root "fixtures") -Directory).Name
+# Only exact fixture names, never paths.
+if ($Name -notin $valid) { throw "No sandbox '$Name'. Choose one of: $($valid -join ', ')" }
 if (-not $env:TYPESAFE_API_KEY) { throw "Set `$env:TYPESAFE_API_KEY first." }
 
 $work = Join-Path ([IO.Path]::GetTempPath()) "pi-jev-sentinel\$Name"

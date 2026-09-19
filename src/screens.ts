@@ -9,7 +9,7 @@
  * Like guard.ts, nothing here touches pi's UI, so it can be tested with a fake Jev.
  */
 
-import { basename, relative, resolve } from "node:path";
+import { basename, isAbsolute, relative, resolve } from "node:path";
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import {
 	describeUserRequest,
@@ -94,11 +94,14 @@ export function isTrustedSource(
 ): boolean {
 	const path = [toolInput.path, toolInput.file_path, toolInput.filePath].find((p) => typeof p === "string");
 	if (typeof path !== "string") return false;
-	const rel = relative(cwd, resolve(cwd, path)).replace(/\\/g, "/");
-	if (rel.startsWith("..")) return false;
+	const raw = relative(cwd, resolve(cwd, path));
+	// Outside the project, including another drive on Windows, where relative() returns an absolute path.
+	if (raw.startsWith("..") || isAbsolute(raw)) return false;
+	const rel = raw.replace(/\\/g, "/");
 	return trustedPaths.some((entry) => {
 		if (entry.endsWith("/")) return rel.startsWith(entry) || rel === entry.slice(0, -1);
-		return rel === entry || (!entry.includes("/") && basename(rel) === entry);
+		if (entry.startsWith("**/")) return basename(rel) === entry.slice(3);
+		return rel === entry;
 	});
 }
 

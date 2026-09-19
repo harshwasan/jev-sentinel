@@ -17,9 +17,10 @@ Pi has no built-in permission system: tools run with your permissions, and a REA
 It also:
 
 - **Asks for more context when unsure.** If Jev says more context would help, the extension adds earlier messages, full tool outputs, or file contents, and asks again (up to 3 rounds) before interrupting you.
-- **Keeps your secrets away from Jev.** Output from `.env`, keys, and credential files is withheld, and those values are scrubbed from everything sent to Jev, including the agent's own replies when it quotes them.
+- **Scrubs secrets before they reach Jev.** Output from `.env`, keys, and credential files is withheld. Their values, secret-looking environment variables, `NAME=value` secrets, and `Bearer` tokens are scrubbed from everything sent to Jev, including the agent's own replies. This is pattern-based, so it reduces leaks rather than guaranteeing none (see [What is sent](#what-is-sent-to-typesafe)).
 - **Pins a task (optional).** Start a message with `*` to pin it. Jev then judges "on task" against the pin instead of whatever the chat drifted to.
 - **Fails closed.** If Jev errors or no key is set, it asks you. It never auto-allows.
+- **Protects its own settings.** Any tool call other than a read that touches `~/.pi/agent` (pi's settings, sessions, and this extension's settings) or the decision log always gets the Block-first warning, whatever Jev says.
 
 ## Examples
 
@@ -58,16 +59,18 @@ Jev answers two questions in one request: **intent** (a Choice) and **risk** (a 
 3. On task ≥ 80%, or clearly safe (risk score < 0.1) with on task as the top answer → **run**
 4. Anything else → **ask you**
 
+Two rules in code sit on top of this. An action longer than Jev can read in full (8,000 characters) is never run without asking you. After a flagged output, every action asks you until `/jev-sentinel reset`. That includes an output too long to screen fully, or one whose check failed.
+
 Jev never sees the thresholds, and every decision is logged with its probabilities.
 
 ## Settings
 
-Put them in `~/.pi/agent/jev-sentinel.json`, or point `JEV_SENTINEL_CONFIG` at a file. Keep it outside the project, where the agent can't edit it. The most useful ones:
+Put them in `~/.pi/agent/jev-sentinel.json`, or point `JEV_SENTINEL_CONFIG` at a file. Keep it outside the project, where the agent can't edit it. `baseUrl` must be `https://`. The most useful ones:
 
 | Setting | Default | |
 |---|---|---|
 | `screenToolOutputs` | `true` | Check tool outputs for agent instructions |
-| `trustedPaths` | `AGENTS.md`, `CLAUDE.md`, `.pi/` | Outputs from these files are never screened |
+| `trustedPaths` | `AGENTS.md`, `CLAUDE.md`, `.pi/` | Outputs from these files are never screened. Paths are relative to the project root: `AGENTS.md` means only the root one, `**/AGENTS.md` means any, and `.pi/` means a folder. Nothing outside the project is trusted. |
 | `taintOnInjection` | `true` | After an injection is found, every action asks you |
 | `screenReplies` | `true` | Check finished replies |
 | `checkUnsupportedClaims` / `checkSkippedWork` | `false` | Optional reply checks |
@@ -81,11 +84,11 @@ The full list, with comments, is in [`src/guard.ts`](src/guard.ts) (`GuardConfig
 
 ## What is sent to TypeSafe
 
-Recent conversation, the tool call, tool outputs, and replies. Nothing from the agent's system prompt is sent. File contents are sent only when Jev asks for them, and only for files inside the project. Anything that looks like a secret file is withheld by name, and its values are scrubbed from everything sent. A secret in a file with an ordinary name is not detected. Values shorter than 8 characters are not scrubbed.
+Recent conversation, the tool call, tool outputs, and replies. Nothing from the agent's system prompt is sent. File contents are sent only when Jev asks for them, and only for files inside the project. Anything that looks like a secret file is withheld by name, and its values are scrubbed from everything sent, for the whole session, even after compaction. Values of environment variables whose names contain KEY, TOKEN, SECRET, PASSW, CREDENTIAL, or AUTH are scrubbed too, and so are `NAME=value` lines with such names and `Bearer` tokens, whatever file or command printed them. A secret that fits none of these patterns, such as a bare token in an ordinary file, is not detected. Values shorter than 8 characters are not scrubbed.
 
 ## Testing
 
-- **`npm test`:** 84 unit tests with a fake Jev.
+- **`npm test`:** 94 unit tests with a fake Jev.
 - **`npm run live-check`:** scripted scenarios against the real Jev API, in all three question modes.
 - **`sandboxes/`:** four practice projects with planted traps (a poisoned README, an injection 1,487 characters into a file, fake `.env` secrets, a login bug to pin). They come with PowerShell scripts to start pi in each, read the decision log, and reset. See [sandboxes/TESTING.md](sandboxes/TESTING.md).
 

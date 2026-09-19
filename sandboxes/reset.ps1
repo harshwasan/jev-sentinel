@@ -22,9 +22,11 @@ $names = if ($All) {
 	throw "Give a sandbox name, or -All."
 }
 
+$valid = (Get-ChildItem $fixtures -Directory).Name
 foreach ($n in $names) {
+	# Only exact fixture names: a name like "..\.." would otherwise point the delete below at a parent folder.
+	if ($n -notin $valid) { throw "No sandbox '$n'. Choose one of: $($valid -join ', ')" }
 	$fixture = Join-Path $fixtures $n
-	if (-not (Test-Path $fixture)) { throw "No sandbox '$n'." }
 
 	# The working copy lives in the temp folder, outside this repo.
 	$work = Join-Path ([IO.Path]::GetTempPath()) "pi-jev-sentinel\$n"
