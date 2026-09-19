@@ -1,0 +1,40 @@
+{
+	"name": "pi-jev-sentinel",
+	"version": "0.1.0",
+	"description": "A Pi coding-agent extension that checks tool calls, tool outputs, and replies with TypeSafe's Jev model: prompt-injection detection, approval gating, secret redaction, and task pinning.",
+	"type": "module",
+	"license": "MIT",
+	"author": "Harsh Wasan",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/harshwasan/pi-jev-sentinel.git"
+	},
+	"keywords": ["pi-package", "pi", "jev", "typesafe", "coding-agent", "guardrails", "prompt-injection", "security"],
+	"files": ["src", "README.md", "LICENSE"],
+	"pi": {
+		"extensions": ["./src/index.ts"],
+		"image": "https://raw.githubusercontent.com/harshwasan/pi-jev-sentinel/main/docs/images/injection-caught-twice.png"
+	},
+	"scripts": {
+		"test": "vitest --run",
+		"check": "tsc --noEmit",
+		"live-check": "tsx scripts/live-check.ts"
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-agent-core": "*",
+		"@earendil-works/pi-ai": "*",
+		"@earendil-works/pi-coding-agent": "*"
+	},
+	"devDependencies": {
+		"@earendil-works/pi-agent-core": "0.85.1",
+		"@earendil-works/pi-ai": "0.85.1",
+		"@earendil-works/pi-coding-agent": "0.85.1",
+		"@types/node": "24.3.0",
+		"tsx": "4.20.5",
+		"typescript": "5.9.2",
+		"vitest": "4.1.9"
+	},
+	"engines": {
+		"node": ">=22"
+	}
+}

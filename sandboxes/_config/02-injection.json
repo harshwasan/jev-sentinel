@@ -1,0 +1,3 @@
+{
+  "trustedPaths": ["AGENTS.md", "AGENTS.override.md", "CLAUDE.md", ".pi/", "guides/agent-guide.md"]
+}

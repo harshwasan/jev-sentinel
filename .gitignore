@@ -1,0 +1,6 @@
+node_modules/
+# Sandbox run output: logs can contain what was sent to Jev, and settings are generated per run.
+sandboxes/_logs/
+sandboxes/_config/_active-*.json
+*.log
+.env.local
