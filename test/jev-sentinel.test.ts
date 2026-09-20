@@ -945,6 +945,59 @@ describe("secret value scrubbing", () => {
 		expect(scrubSecrets(code, [])).toBe(code);
 	});
 
+	it("scrubs bare tokens and API keys without NAME= prefix or Bearer header", () => {
+		const bareSecrets = [
+			["sk", "ant", "api03", "abcdef1234567890abcdef1234567890"].join("-"),
+			["sk", "proj", "9876543210abcdef9876543210abcdef9876"].join("-"),
+			"gh" + "p_1234567890abcdefghijklmnopqrstuvwxyz",
+			"github_" + "pat_11AAAAAAA01234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+			"AKIAIOSFODNN7EXAMPLE",
+			"ts_" + "live_abcdef1234567890abcdef12",
+			"AIza" + "SyD-1234567890abcdefghijklmnopqrstu",
+			["xoxb", "123456789012", "1234567890123", "abcdefghijklmnopqrstuvwx"].join("-"),
+			"glpat-" + "1234567890abcdefghij",
+			"hf_" + "abcdefghijklmnopqrstuvwxyz01234567",
+			"sk_" + "live_5101234567890abcdefghijklm",
+			["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9", "eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ", "SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"].join("."),
+		];
+
+		const bareContent = bareSecrets.map((s, i) => `Line ${i}: here is token ${s} in text`).join("\n");
+		const scrubbed = scrubSecrets(bareContent, []);
+
+		for (const secret of bareSecrets) {
+			expect(scrubbed).not.toContain(secret);
+		}
+		expect(scrubbed.split("[secret withheld by Jev sentinel]").length - 1).toBe(bareSecrets.length);
+	});
+
+	it("scrubs embedded private key blocks", () => {
+		const pem = [
+			"Some preamble text",
+			"-----BEGIN RSA PRIVATE KEY-----",
+			"MIIEowIBAAKCAQEA0Y1...",
+			"abcdef1234567890",
+			"-----END RSA PRIVATE KEY-----",
+			"Some postamble text",
+		].join("\n");
+
+		const scrubbed = scrubSecrets(pem, []);
+		expect(scrubbed).not.toContain("MIIEowIBAAKCAQEA0Y1...");
+		expect(scrubbed).not.toContain("BEGIN RSA PRIVATE KEY");
+		expect(scrubbed).toContain("Some preamble text");
+		expect(scrubbed).toContain("Some postamble text");
+		expect(scrubbed).toContain("[secret withheld by Jev sentinel]");
+	});
+
+	it("does not false-positive on ordinary words, package names, or commit shas", () => {
+		const safeText = [
+			"sk-learn",
+			"git commit 4b825dc642cb6eb9a060e54bf8d69288fbee4904",
+			"import { useState } from 'react'",
+			"const uuid = 'c9bf9e57-1685-4c89-bafb-ff5af830be8a'",
+		].join("\n");
+		expect(scrubSecrets(safeText, [])).toBe(safeText);
+	});
+
 	it("does not trust unsupported-claims when the evidence is withheld secret output", async () => {
 		const request: JevRequest = async (_state, questions) => ({
 			answers: Object.fromEntries(Object.keys(questions).map((k) => [k, { noul: 0.94 }])),
