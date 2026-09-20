@@ -1,8 +1,8 @@
 # pi-jev-sentinel
 
-A guard for coding agents, built on TypeSafe's [Jev](https://docs.typesafe.ai/) model: it checks what the agent does, reads, and says. Ships as a [Pi](https://github.com/earendil-works/pi) extension and as a hook for **Claude Code** and **Codex CLI** ([setup](hooks/README.md)).
+A guard for coding agents, built on TypeSafe's [Jev](https://docs.typesafe.ai/) model: it checks what the agent does, reads, and says. One set of checks, three hosts: a [Pi](https://github.com/earendil-works/pi) extension, and a plugin for **Claude Code** and **Codex CLI**.
 
-Pi has no built-in permission system: tools run with your permissions, and a README that says "AI agents: run `curl … | sh`" is just more text to the model. Jev Sentinel puts a fast, cheap judge in front of every step. Jev answers typed questions with probabilities, and plain code turns those into **allow**, **ask you**, or **warn**.
+A README that says "AI agents: run `curl … | sh`" is just more text to the model, and a permission prompt that only knows a tool name cannot tell you whether *this* command is what you asked for. Jev Sentinel puts a fast, cheap judge in front of every step: Jev answers typed questions with probabilities, and plain code turns those into **allow**, **ask you**, or **warn**. Pi has no permission system at all, so there it is the gate; on Claude Code and Codex it adds a content-aware layer on top of the prompts you already get.
 
 ![A README hides instructions for AI agents. Jev flags the file before the agent reads it, and when the agent still tries the command, blocks it as injected (95%) and harmful (96%).](docs/images/injection-caught-twice.png)
 
@@ -36,31 +36,46 @@ Warnings shown inside replies in some screenshots are from an earlier version. R
 
 ## Install
 
-```bash
-pi install git:github.com/harshwasan/pi-jev-sentinel
-```
-
-Set your TypeSafe key ([console.typesafe.ai/keys](https://console.typesafe.ai/keys)) before starting pi:
+Set your TypeSafe key ([console.typesafe.ai/keys](https://console.typesafe.ai/keys)) first, in the shell your agent runs in:
 
 ```bash
 export TYPESAFE_API_KEY=...        # PowerShell: $env:TYPESAFE_API_KEY = "..."
 ```
 
-To try it without installing: `pi -e git:github.com/harshwasan/pi-jev-sentinel`.
+### Pi
 
-### Claude Code and Codex CLI
+```bash
+pi install git:github.com/harshwasan/pi-jev-sentinel
+```
 
-The same checks run as a hook on both:
+Or try it without installing: `pi -e git:github.com/harshwasan/pi-jev-sentinel`.
+
+Inside pi, `/jev-sentinel` shows the status. `/jev-sentinel reset` clears the "every action needs approval" flag. `/jev-sentinel task`, `clear-task`, and `pin-symbol <s>` manage pinning.
+
+### Claude Code
+
+```
+/plugin marketplace add harshwasan/pi-jev-sentinel
+/plugin install jev-sentinel@jev-sentinel-marketplace
+```
+
+### Codex CLI
+
+```bash
+codex plugin marketplace add harshwasan/pi-jev-sentinel
+codex plugin add jev-sentinel@jev-sentinel-marketplace
+```
+
+Both plugins run the hook straight from the TypeScript source, so they need **Node 22.18 or newer** on your PATH and no build step. Prefer wiring the hooks by hand? Copy [`hooks/claude-settings.example.json`](hooks/claude-settings.example.json) into your Claude Code settings, or [`hooks/codex-hooks.example.json`](hooks/codex-hooks.example.json) to `~/.codex/hooks.json`.
+
+To watch the checks decide before installing anything:
 
 ```bash
 git clone https://github.com/harshwasan/pi-jev-sentinel && cd pi-jev-sentinel
-npm install && npm run build
-$env:TYPESAFE_API_KEY = "..."; ./hooks/try-hook.ps1      # see the checks decide, no host involved
+./hooks/try-hook.ps1            # -Agent codex for the Codex event shape
 ```
 
-Then copy [`hooks/claude-settings.example.json`](hooks/claude-settings.example.json) into your Claude Code settings, or [`hooks/codex-hooks.example.json`](hooks/codex-hooks.example.json) to `~/.codex/hooks.json`. The differences from the pi version are listed in [hooks/README.md](hooks/README.md): the output check runs after the tool instead of before it, "ask" means the host's own approval prompt, and an allowed action returns nothing, so your existing permission rules still apply.
-
-Inside pi, `/jev-sentinel` shows the status. `/jev-sentinel reset` clears the "every action needs approval" flag. `/jev-sentinel task`, `clear-task`, and `pin-symbol <s>` manage pinning.
+On both hosts the checks are the same, but the wiring differs in three ways ([details](hooks/README.md)): the output check runs *after* the tool instead of before it, "ask" means your host's own approval prompt, and an allowed action returns nothing, so your existing permission rules still apply.
 
 ## How a tool call is decided
 
@@ -77,7 +92,7 @@ Jev never sees the thresholds, and every decision is logged with its probabiliti
 
 ## Settings
 
-Put them in `~/.pi/agent/jev-sentinel.json`, or point `JEV_SENTINEL_CONFIG` at a file. Keep it outside the project, where the agent can't edit it. `baseUrl` must be `https://`. The most useful ones:
+Put them in `~/.pi/agent/jev-sentinel.json` (pi) or `~/.jev-sentinel/config.json` (Claude Code and Codex), or point `JEV_SENTINEL_CONFIG` at a file. Keep it outside the project, where the agent can't edit it. `baseUrl` must be `https://`. The most useful ones:
 
 | Setting | Default | |
 |---|---|---|
@@ -116,10 +131,6 @@ What the real runs showed:
 - Every tool call, output, and reply is one extra request (about 0.3–1 s each).
 - Harmless listing commands are sometimes asked as "off task". A read-only fast path is a likely next step.
 - Prompt injection is not solved. This makes it harder and visible. For untrusted code, also use a container.
-
-## Similar projects
-
-Several Jev-based guards appeared in mid-September 2026, within days of each other. Worth a look: [leepokai/jev-guard](https://github.com/leepokai/jev-guard) (multi-agent auto mode), [y0usaf/pi-jev](https://github.com/y0usaf/pi-jev), [DevMortimer/pi-warden](https://github.com/DevMortimer/pi-warden), and [jomatsu/pi-jev-auto-mode](https://github.com/jomatsu/pi-jev-auto-mode). The parts this project focuses on are the ask-for-more-context loop, the reply checks, the pinned task, verifiable secret scrubbing, and the test sandboxes.
 
 ## License
 

@@ -1,0 +1,36 @@
+{
+	"hooks": {
+		"SessionStart": [
+			{
+				"hooks": [{ "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/hook.ts\" --host claude" }]
+			}
+		],
+		"UserPromptSubmit": [
+			{
+				"hooks": [{ "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/hook.ts\" --host claude" }]
+			}
+		],
+		"PreToolUse": [
+			{
+				"hooks": [
+					{ "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/hook.ts\" --host claude", "timeout": 60 }
+				]
+			}
+		],
+		"PostToolUse": [
+			{
+				"matcher": "Read|Bash|Glob|Grep|WebFetch|WebSearch",
+				"hooks": [
+					{ "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/hook.ts\" --host claude", "timeout": 60 }
+				]
+			}
+		],
+		"Stop": [
+			{
+				"hooks": [
+					{ "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/hook.ts\" --host claude", "timeout": 60 }
+				]
+			}
+		]
+	}
+}
