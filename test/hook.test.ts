@@ -14,7 +14,7 @@ const HOOK = join(import.meta.dirname, "..", "src", "hook.ts");
 
 /** Runs the hook exactly as a host would: one JSON event in, one JSON decision out. */
 function runHook(event: Record<string, unknown>, env: Record<string, string> = {}): Record<string, unknown> {
-	const out = execFileSync(process.execPath, [HOOK, "--host", String(env.HOST ?? "claude")], {
+	const out = execFileSync(process.execPath, ["--import", "tsx", HOOK, "--host", String(env.HOST ?? "claude")], {
 		input: JSON.stringify(event),
 		encoding: "utf8",
 		env: { ...process.env, TYPESAFE_API_KEY: "", ...env },
@@ -175,7 +175,7 @@ describe("hook decisions", () => {
 
 	it("does nothing on an event it does not handle, and on unparsable input", () => {
 		expect(runHook(base({ hook_event_name: "PreCompact" }), { JEV_SENTINEL_CONFIG: configPath })).toEqual({});
-		const out = execFileSync(process.execPath, [HOOK], { input: "not json", encoding: "utf8" });
+		const out = execFileSync(process.execPath, ["--import", "tsx", HOOK], { input: "not json", encoding: "utf8" });
 		expect(out.trim()).toBe("");
 	});
 

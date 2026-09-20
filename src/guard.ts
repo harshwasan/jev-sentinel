@@ -396,6 +396,38 @@ const SECRET_NAME = /(KEY|TOKEN|SECRET|PASSW|CREDENTIAL|AUTH)/i;
 const SECRET_ASSIGNMENT =
 	/(\b[\w.-]*(?:KEY|TOKEN|SECRET|PASSW|CREDENTIAL|AUTH)[\w.-]*["']?\s*[=:]\s*["']?)([^\s"',;()]{8,})/gi;
 const BEARER_TOKEN = /(\bBearer\s+)([\w.~+/-]{8,}=*)/g;
+
+/**
+ * High-confidence bare token and API key patterns (OpenAI/Anthropic, GitHub, AWS, TypeSafe, Google, Slack, etc.).
+ * These catch bare credentials in arbitrary files and tool outputs even when they do not appear in a NAME=value format.
+ */
+export const BARE_TOKEN_PATTERNS: readonly RegExp[] = [
+	// OpenAI, Anthropic, and other sk- prefixed provider keys (20+ chars)
+	/\b(sk-[a-zA-Z0-9_\-]{20,})\b/g,
+	// GitHub tokens (classic ghp_, fine-grained github_pat_, OAuth gho_, App gha_, etc.)
+	/\b(gh[pousra]_[a-zA-Z0-9]{36,}|github_pat_[a-zA-Z0-9_]{82})\b/g,
+	// AWS access key ID
+	/\b((?:AKIA|ABIA|ACCA|ASIA)[0-9A-Z]{16})\b/g,
+	// TypeSafe API keys
+	/\b(ts_[a-zA-Z0-9_\-]{20,})\b/g,
+	// Google API keys (39 chars starting with AIza)
+	/\b(AIza[0-9A-Za-z_\-]{35})\b/g,
+	// Slack tokens
+	/\b(xox[baprs]-[0-9a-zA-Z-]{20,})\b/g,
+	// GitLab personal access tokens
+	/\b(glpat-[0-9a-zA-Z_\-]{20,})\b/g,
+	// Hugging Face tokens
+	/\b(hf_[a-zA-Z0-9]{34,})\b/g,
+	// Stripe live keys
+	/\b((?:sk|rk)_live_[0-9a-zA-Z]{24,})\b/g,
+	// JSON Web Tokens (header and payload starting with eyJ)
+	/\b(eyJ[a-zA-Z0-9_-]{8,}\.eyJ[a-zA-Z0-9_-]{8,}\.[a-zA-Z0-9_-]{8,})\b/g,
+];
+
+/** Private key blocks embedded in arbitrary text. */
+export const PRIVATE_KEY_BLOCK =
+	/-----BEGIN (?:[A-Z0-9_-]+ )?PRIVATE KEY-----[\s\S]*?-----END (?:[A-Z0-9_-]+ )?PRIVATE KEY-----/g;
+
 /** Tool inputs longer than this are cut before Jev sees them. */
 export const MAX_INPUT_CHARS = 8_000;
 
@@ -503,14 +535,21 @@ export function collectSecrets(messages: AgentMessage[], env: NodeJS.ProcessEnv 
  * secret-looking NAME=value assignment or Bearer token, whatever command or file it came from.
  */
 export function scrubSecrets<T>(value: T, secrets: readonly string[]): T {
-	const scrubText = (text: string): string =>
-		secrets
+	const scrubText = (text: string): string => {
+		let scrubbed = secrets
 			.reduce((t, secret) => t.split(secret).join(SCRUBBED_SECRET), text)
 			// Real secrets contain a digit; code references like process.env.API_KEY or ${TOKEN} are left alone.
 			.replace(SECRET_ASSIGNMENT, (match, name: string, value: string) =>
 				/\d/.test(value) && !/^[$%{]|^(process\.env|os\.environ)\b/.test(value) ? name + SCRUBBED_SECRET : match,
 			)
-			.replace(BEARER_TOKEN, `$1${SCRUBBED_SECRET}`);
+			.replace(BEARER_TOKEN, `$1${SCRUBBED_SECRET}`)
+			.replace(PRIVATE_KEY_BLOCK, SCRUBBED_SECRET);
+
+		for (const pattern of BARE_TOKEN_PATTERNS) {
+			scrubbed = scrubbed.replace(pattern, SCRUBBED_SECRET);
+		}
+		return scrubbed;
+	};
 	const scrub = (v: unknown): unknown => {
 		if (typeof v === "string") return scrubText(v);
 		if (Array.isArray(v)) return v.map(scrub);

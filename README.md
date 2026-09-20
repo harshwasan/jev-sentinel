@@ -96,11 +96,11 @@ The full list, with comments, is in [`src/guard.ts`](src/guard.ts) (`GuardConfig
 
 ## What is sent to TypeSafe
 
-Recent conversation, the tool call, tool outputs, and replies. Nothing from the agent's system prompt is sent. File contents are sent only when Jev asks for them, and only for files inside the project. Anything that looks like a secret file is withheld by name, and its values are scrubbed from everything sent, for the whole session, even after compaction. Values of environment variables whose names contain KEY, TOKEN, SECRET, PASSW, CREDENTIAL, or AUTH are scrubbed too, and so are `NAME=value` lines with such names and `Bearer` tokens, whatever file or command printed them. A secret that fits none of these patterns, such as a bare token in an ordinary file, is not detected. Values shorter than 8 characters are not scrubbed.
+Recent conversation, the tool call, tool outputs, and replies. Nothing from the agent's system prompt is sent. File contents are sent only when Jev asks for them, and only for files inside the project. Anything that looks like a secret file is withheld by name, and its values are scrubbed from everything sent, for the whole session, even after compaction. Values of environment variables whose names contain KEY, TOKEN, SECRET, PASSW, CREDENTIAL, or AUTH are scrubbed too, and so are `NAME=value` lines with such names and `Bearer` tokens, whatever file or command printed them. High-confidence bare API keys and tokens (OpenAI, Anthropic, GitHub, AWS, TypeSafe, Google, Slack, etc.) and private key blocks are also scrubbed anywhere they appear. Values shorter than 8 characters are not scrubbed.
 
 ## Testing
 
-- **`npm test`:** 106 unit tests with a fake Jev, including the hook run as a real subprocess and both hosts' transcript formats.
+- **`npm test`:** 109 unit tests with a fake Jev, including the hook run as a real subprocess and both hosts' transcript formats.
 - **`npm run live-check`:** scripted scenarios against the real Jev API, in all three question modes.
 - **`sandboxes/`:** four practice projects with planted traps (a poisoned README, an injection 1,487 characters into a file, fake `.env` secrets, a login bug to pin). They come with PowerShell scripts to start pi in each, read the decision log, and reset. See [sandboxes/TESTING.md](sandboxes/TESTING.md).
 
