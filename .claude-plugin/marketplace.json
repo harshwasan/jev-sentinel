@@ -10,13 +10,13 @@
 			"name": "jev-sentinel",
 			"source": {
 				"source": "url",
-				"url": "https://github.com/harshwasan/pi-jev-sentinel.git"
+				"url": "https://github.com/harshwasan/jev-sentinel.git"
 			},
 			"description": "Checks every tool call, tool output and reply with TypeSafe's Jev model: prompt-injection screening, approval gating and secret scrubbing.",
 			"version": "0.1.0",
 			"author": { "name": "Harsh Wasan" },
-			"homepage": "https://github.com/harshwasan/pi-jev-sentinel#readme",
-			"repository": "https://github.com/harshwasan/pi-jev-sentinel",
+			"homepage": "https://github.com/harshwasan/jev-sentinel#readme",
+			"repository": "https://github.com/harshwasan/jev-sentinel",
 			"license": "MIT",
 			"keywords": ["security", "prompt-injection", "guardrails", "jev"],
 			"category": "Security"

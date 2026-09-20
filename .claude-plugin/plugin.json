@@ -7,8 +7,8 @@
 		"name": "Harsh Wasan",
 		"url": "https://github.com/harshwasan"
 	},
-	"homepage": "https://github.com/harshwasan/pi-jev-sentinel#readme",
-	"repository": "https://github.com/harshwasan/pi-jev-sentinel",
+	"homepage": "https://github.com/harshwasan/jev-sentinel#readme",
+	"repository": "https://github.com/harshwasan/jev-sentinel",
 	"license": "MIT",
 	"keywords": ["security", "prompt-injection", "guardrails", "jev", "typesafe", "hooks"],
 	"hooks": "./hooks/hooks.json"

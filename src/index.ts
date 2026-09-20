@@ -17,7 +17,7 @@
  * Optional pinning (pinTasks): a message starting with "*" pins the rest as the current task, and Jev
  * judges "on task" against it. pinTaskInPrompt also restates it to the agent every turn.
  *
- * Setup: set TYPESAFE_API_KEY, then `pi install git:github.com/harshwasan/pi-jev-sentinel`.
+ * Setup: set TYPESAFE_API_KEY, then `pi install git:github.com/harshwasan/jev-sentinel`.
  * Optional config: ~/.pi/agent/jev-sentinel.json or JEV_SENTINEL_CONFIG (see README.md).
  */
 

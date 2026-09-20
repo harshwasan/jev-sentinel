@@ -6,8 +6,8 @@
 		"name": "Harsh Wasan",
 		"url": "https://github.com/harshwasan"
 	},
-	"homepage": "https://github.com/harshwasan/pi-jev-sentinel#readme",
-	"repository": "https://github.com/harshwasan/pi-jev-sentinel",
+	"homepage": "https://github.com/harshwasan/jev-sentinel#readme",
+	"repository": "https://github.com/harshwasan/jev-sentinel",
 	"license": "MIT",
 	"keywords": ["security", "prompt-injection", "guardrails", "jev", "typesafe", "hooks"],
 	"hooks": "./hooks/codex-hooks.json",
@@ -17,6 +17,6 @@
 		"longDescription": "Before a tool call runs, Jev judges whether it is on task and how risky it is, and the plugin asks you or blocks it. Tool output is screened for instructions aimed at AI agents, and finished replies are checked for harmful content and relayed injections. Secrets are scrubbed from everything sent to Jev.",
 		"developerName": "Harsh Wasan",
 		"category": "Security",
-		"websiteURL": "https://github.com/harshwasan/pi-jev-sentinel"
+		"websiteURL": "https://github.com/harshwasan/jev-sentinel"
 	}
 }

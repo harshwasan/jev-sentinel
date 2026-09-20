@@ -1,4 +1,4 @@
-# pi-jev-sentinel
+# jev-sentinel
 
 A guard for coding agents, built on TypeSafe's [Jev](https://docs.typesafe.ai/) model: it checks what the agent does, reads, and says. One set of checks, three hosts: a [Pi](https://github.com/earendil-works/pi) extension, and a plugin for **Claude Code** and **Codex CLI**.
 
@@ -45,24 +45,24 @@ export TYPESAFE_API_KEY=...        # PowerShell: $env:TYPESAFE_API_KEY = "..."
 ### Pi
 
 ```bash
-pi install git:github.com/harshwasan/pi-jev-sentinel
+pi install git:github.com/harshwasan/jev-sentinel
 ```
 
-Or try it without installing: `pi -e git:github.com/harshwasan/pi-jev-sentinel`.
+Or try it without installing: `pi -e git:github.com/harshwasan/jev-sentinel`.
 
 Inside pi, `/jev-sentinel` shows the status. `/jev-sentinel reset` clears the "every action needs approval" flag. `/jev-sentinel task`, `clear-task`, and `pin-symbol <s>` manage pinning.
 
 ### Claude Code
 
 ```
-/plugin marketplace add harshwasan/pi-jev-sentinel
+/plugin marketplace add harshwasan/jev-sentinel
 /plugin install jev-sentinel@jev-sentinel-marketplace
 ```
 
 ### Codex CLI
 
 ```bash
-codex plugin marketplace add harshwasan/pi-jev-sentinel
+codex plugin marketplace add harshwasan/jev-sentinel
 codex plugin add jev-sentinel@jev-sentinel-marketplace
 ```
 
@@ -71,7 +71,7 @@ Both plugins run the hook straight from the TypeScript source, so they need **No
 To watch the checks decide before installing anything:
 
 ```bash
-git clone https://github.com/harshwasan/pi-jev-sentinel && cd pi-jev-sentinel
+git clone https://github.com/harshwasan/jev-sentinel && cd jev-sentinel
 ./hooks/try-hook.ps1            # -Agent codex for the Codex event shape
 ```
 

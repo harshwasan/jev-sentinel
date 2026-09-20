@@ -29,7 +29,7 @@ foreach ($n in $names) {
 	$fixture = Join-Path $fixtures $n
 
 	# The working copy lives in the temp folder, outside this repo.
-	$work = Join-Path ([IO.Path]::GetTempPath()) "pi-jev-sentinel\$n"
+	$work = Join-Path ([IO.Path]::GetTempPath()) "jev-sentinel\$n"
 	if (Test-Path $work) { Remove-Item $work -Recurse -Force }
 	New-Item -ItemType Directory -Force $work | Out-Null
 	# -Force includes hidden files such as .env.

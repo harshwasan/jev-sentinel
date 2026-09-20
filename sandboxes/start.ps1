@@ -40,7 +40,7 @@ $valid = (Get-ChildItem (Join-Path $root "fixtures") -Directory).Name
 if ($Name -notin $valid) { throw "No sandbox '$Name'. Choose one of: $($valid -join ', ')" }
 if (-not $env:TYPESAFE_API_KEY) { throw "Set `$env:TYPESAFE_API_KEY first." }
 
-$work = Join-Path ([IO.Path]::GetTempPath()) "pi-jev-sentinel\$Name"
+$work = Join-Path ([IO.Path]::GetTempPath()) "jev-sentinel\$Name"
 if (-not (Test-Path $work)) { & (Join-Path $root "reset.ps1") $Name | Out-Null }
 
 # Settings live outside the sandbox, so the agent cannot read or edit its own guard settings.

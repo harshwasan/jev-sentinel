@@ -2,12 +2,12 @@
 	"hooks": {
 		"SessionStart": [
 			{
-				"hooks": [{ "type": "command", "command": "node /path/to/pi-jev-sentinel/dist/hook.js --host codex" }]
+				"hooks": [{ "type": "command", "command": "node /path/to/jev-sentinel/dist/hook.js --host codex" }]
 			}
 		],
 		"UserPromptSubmit": [
 			{
-				"hooks": [{ "type": "command", "command": "node /path/to/pi-jev-sentinel/dist/hook.js --host codex" }]
+				"hooks": [{ "type": "command", "command": "node /path/to/jev-sentinel/dist/hook.js --host codex" }]
 			}
 		],
 		"PreToolUse": [
@@ -16,7 +16,7 @@
 				"hooks": [
 					{
 						"type": "command",
-						"command": "node /path/to/pi-jev-sentinel/dist/hook.js --host codex",
+						"command": "node /path/to/jev-sentinel/dist/hook.js --host codex",
 						"statusMessage": "Jev is checking this action",
 						"timeout": 60
 					}
@@ -27,14 +27,14 @@
 			{
 				"matcher": "shell|apply_patch|read_file|mcp__.*",
 				"hooks": [
-					{ "type": "command", "command": "node /path/to/pi-jev-sentinel/dist/hook.js --host codex", "timeout": 60 }
+					{ "type": "command", "command": "node /path/to/jev-sentinel/dist/hook.js --host codex", "timeout": 60 }
 				]
 			}
 		],
 		"Stop": [
 			{
 				"hooks": [
-					{ "type": "command", "command": "node /path/to/pi-jev-sentinel/dist/hook.js --host codex", "timeout": 60 }
+					{ "type": "command", "command": "node /path/to/jev-sentinel/dist/hook.js --host codex", "timeout": 60 }
 				]
 			}
 		]

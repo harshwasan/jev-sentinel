@@ -2,19 +2,19 @@
 	"hooks": {
 		"SessionStart": [
 			{
-				"hooks": [{ "type": "command", "command": "node /path/to/pi-jev-sentinel/dist/hook.js --host claude" }]
+				"hooks": [{ "type": "command", "command": "node /path/to/jev-sentinel/dist/hook.js --host claude" }]
 			}
 		],
 		"UserPromptSubmit": [
 			{
-				"hooks": [{ "type": "command", "command": "node /path/to/pi-jev-sentinel/dist/hook.js --host claude" }]
+				"hooks": [{ "type": "command", "command": "node /path/to/jev-sentinel/dist/hook.js --host claude" }]
 			}
 		],
 		"PreToolUse": [
 			{
 				"matcher": "*",
 				"hooks": [
-					{ "type": "command", "command": "node /path/to/pi-jev-sentinel/dist/hook.js --host claude", "timeout": 60 }
+					{ "type": "command", "command": "node /path/to/jev-sentinel/dist/hook.js --host claude", "timeout": 60 }
 				]
 			}
 		],
@@ -22,14 +22,14 @@
 			{
 				"matcher": "Read|Bash|Fetch|WebFetch|Glob|Grep",
 				"hooks": [
-					{ "type": "command", "command": "node /path/to/pi-jev-sentinel/dist/hook.js --host claude", "timeout": 60 }
+					{ "type": "command", "command": "node /path/to/jev-sentinel/dist/hook.js --host claude", "timeout": 60 }
 				]
 			}
 		],
 		"Stop": [
 			{
 				"hooks": [
-					{ "type": "command", "command": "node /path/to/pi-jev-sentinel/dist/hook.js --host claude", "timeout": 60 }
+					{ "type": "command", "command": "node /path/to/jev-sentinel/dist/hook.js --host claude", "timeout": 60 }
 				]
 			}
 		]

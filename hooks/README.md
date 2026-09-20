@@ -14,8 +14,8 @@ stdin and read one JSON decision from stdout, so one program serves both.
 ## Setup
 
 ```bash
-git clone https://github.com/harshwasan/pi-jev-sentinel
-cd pi-jev-sentinel
+git clone https://github.com/harshwasan/jev-sentinel
+cd jev-sentinel
 npm install
 npm run build          # writes dist/hook.js
 ```
@@ -34,7 +34,7 @@ a reply that relays the injection) and prints each decision. Nothing runs, no ho
 
 Copy the blocks from [`claude-settings.example.json`](claude-settings.example.json) into
 `~/.claude/settings.json` (all projects) or `.claude/settings.local.json` (one project), replacing
-`/path/to/pi-jev-sentinel` with where you cloned it.
+`/path/to/jev-sentinel` with where you cloned it.
 
 ### Codex CLI
 

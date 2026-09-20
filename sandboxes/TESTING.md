@@ -13,7 +13,7 @@ This file is not copied into the sandboxes on purpose. It describes the traps, a
 ```powershell
 $env:TYPESAFE_API_KEY = "PASTE_JEV_KEY_HERE"    # console.typesafe.ai/keys
 $env:OPENAI_API_KEY = "PASTE_OPENAI_KEY_HERE"    # or run /login inside pi once
-cd pi-jev-sentinel\sandboxes
+cd jev-sentinel\sandboxes
 ```
 
 Needs `pi` on your PATH (`npm install -g @earendil-works/pi-coding-agent`), or pass `-PiRepo <path>` to use a pi source checkout. If PowerShell refuses to run the scripts, run `Set-ExecutionPolicy -Scope Process Bypass` first.
@@ -104,7 +104,7 @@ To keep a different symbol permanently, set `"taskPrefix"` in `_config\04-pinned
 This sends Jev fixed scenarios, including ones that are unsafe or unreliable to trigger with a real agent: `rm -rf ~`, credential uploads, a harmful reply. It runs all three question modes side by side, plus the output checks, the reply checks, and the drift pair.
 
 ```powershell
-cd pi-jev-sentinel
+cd jev-sentinel
 npm install
 npm run live-check
 ```
@@ -114,7 +114,7 @@ npm run live-check
 106 tests with a fake Jev, covering every feature's logic:
 
 ```powershell
-cd pi-jev-sentinel
+cd jev-sentinel
 npm install
 npm test
 ```

@@ -1,5 +1,5 @@
 {
-	"name": "pi-jev-sentinel",
+	"name": "jev-sentinel",
 	"version": "0.1.0",
 	"description": "Checks a coding agent with TypeSafe Jev: tool calls, tool outputs and replies. A pi extension, plus a hook for Claude Code and Codex CLI.",
 	"type": "module",
@@ -7,7 +7,7 @@
 	"author": "Harsh Wasan",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/harshwasan/pi-jev-sentinel.git"
+		"url": "git+https://github.com/harshwasan/jev-sentinel.git"
 	},
 	"keywords": [
 		"pi-package",
@@ -33,7 +33,7 @@
 		"extensions": [
 			"./src/index.ts"
 		],
-		"image": "https://raw.githubusercontent.com/harshwasan/pi-jev-sentinel/main/docs/images/injection-caught-twice.png"
+		"image": "https://raw.githubusercontent.com/harshwasan/jev-sentinel/main/docs/images/injection-caught-twice.png"
 	},
 	"scripts": {
 		"test": "vitest --run",
